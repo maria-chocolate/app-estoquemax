@@ -1532,33 +1532,39 @@ function saveContagemNome() {
   localStorage.setItem('estoquemax_contagem_nome', document.getElementById('contagem-nome').value);
 }
 
+// txt2: sum quantities per barcode (one line per product, regardless of expiry)
+function getTxt2Content(rows) {
+  const totals = new Map();
+  rows.forEach(r => {
+    const bc = r.barcode;
+    totals.set(bc, (totals.get(bc) || 0) + r.qty);
+  });
+  return [...totals.entries()]
+    .map(([bc, qty]) => `${bc.padEnd(14,' ')};${String(qty).padStart(5,'0')}`)
+    .join('\r\n');
+}
+
 async function sendToDrive() {
   const nome = getContagemNome();
   const rows = await getAllEntryRows();
   if (!rows.length) { showToast('Nenhum lançamento para exportar!', 'error'); return; }
 
-  // Save to history before exporting
   saveToHistory(nome, db.entries);
 
   const txt1 = rows.map(r => `${r.sku}|${r.barcode}|${r.name}|${expiryToShort(r.expiry)}|${r.qty}`).join('\r\n');
-  const txt2 = rows.map(r => `${r.barcode.padEnd(14,' ')};${String(r.qty).padStart(5,'0')}`).join('\r\n');
+  const txt2 = getTxt2Content(rows);
 
   const file1 = new File([txt1], nome + '_validade.txt', { type: 'text/plain' });
   const file2 = new File([txt2], nome + '.txt',          { type: 'text/plain' });
 
-  // Use Web Share API if available (Android Chrome supports file sharing)
   if (navigator.canShare && navigator.canShare({ files: [file1, file2] })) {
     try {
-      await navigator.share({
-        files: [file1, file2],
-        title: nome
-      });
+      await navigator.share({ files: [file1, file2], title: nome });
       showToast('Arquivos compartilhados ✓', 'success');
     } catch (e) {
       if (e.name !== 'AbortError') showToast('Erro ao compartilhar', 'error');
     }
   } else {
-    // Fallback: download both files
     showToast('Compartilhamento não suportado, baixando...', 'warn');
     dlFile(nome + '_validade.txt', txt1, 'text/plain;charset=utf-8');
     setTimeout(() => dlFile(nome + '.txt', txt2, 'text/plain;charset=utf-8'), 400);
@@ -1570,11 +1576,10 @@ async function exportTXT() {
   const rows = await getAllEntryRows();
   if (!rows.length) { showToast('Nenhum lançamento para exportar!', 'error'); return; }
 
-  // Save to history before exporting
   saveToHistory(nome, db.entries);
 
   const txt1 = rows.map(r => `${r.sku}|${r.barcode}|${r.name}|${expiryToShort(r.expiry)}|${r.qty}`).join('\r\n');
-  const txt2 = rows.map(r => `${r.barcode.padEnd(14,' ')};${String(r.qty).padStart(5,'0')}`).join('\r\n');
+  const txt2 = getTxt2Content(rows);
 
   dlFile(nome + '_validade.txt', txt1, 'text/plain;charset=utf-8');
   setTimeout(() => dlFile(nome + '.txt', txt2, 'text/plain;charset=utf-8'), 400);
