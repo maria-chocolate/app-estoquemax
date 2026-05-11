@@ -1297,6 +1297,10 @@ async function renderCountList() {
     });
   }
 
+  // Show/hide scan CTA card based on whether there are any entries today
+  const scanCta = document.getElementById('scan-cta');
+  if (scanCta) scanCta.style.display = db.entries.length > 0 ? 'none' : 'block';
+
   // Show/hide danger zone based on whether there are any entries at all
   clearEl.style.display = db.entries.length > 0 ? 'block' : 'none';
   hdr.style.display = recent.length ? 'block' : 'none';
