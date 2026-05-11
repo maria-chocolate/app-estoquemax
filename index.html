@@ -506,8 +506,15 @@
 <!-- MODAL: SCANNER -->
 <div id="scanner-modal" class="modal-overlay" onclick="handleScannerOverlayClick(event)">
   <div class="modal" id="scanner-modal-inner">
-    <div class="modal-handle" id="scanner-handle" style="cursor:grab"></div>
-    <div class="modal-title" id="scanner-title">📷 Escanear Código de Barras</div>
+    <div id="scanner-handle" style="width:100%;padding:8px 0 4px;cursor:grab;display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:6px">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" id="scanner-title" style="margin-bottom:0">📷 Escanear Código de Barras</div>
+      <button class="btn-icon" onclick="stopScanner()" style="flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
     <div id="qr-reader"></div>
 
     <!-- Entrada manual dentro do modal do scanner -->
@@ -1173,29 +1180,37 @@ function countWithoutCatalog() {
 function cancelCount() { resetCountUI(); }
 
 function handleScannerOverlayClick(e) {
+  // Close if clicking the dark backdrop area above the modal sheet
   if (e.target === document.getElementById('scanner-modal')) {
-    const isManual = document.getElementById('manual-entry-area').style.display !== 'none';
-    if (isManual) {
-      stopScanner();
-    } else {
-      stopScanner();
-    }
+    stopScanner();
   }
 }
 
-// Swipe down on scanner modal handle to close
+// Drag down the scanner modal handle to close it
 (function() {
-  let startY = 0;
+  let startY = 0, isDragging = false;
+  const getHandle = () => document.getElementById('scanner-handle');
+
   document.addEventListener('touchstart', e => {
-    if (e.target === document.getElementById('scanner-handle')) {
-      startY = e.touches[0].clientY;
+    const h = getHandle();
+    if (!h) return;
+    // Allow drag anywhere on the modal header area (handle + title)
+    const modal = document.getElementById('scanner-modal-inner');
+    if (!modal) return;
+    const rect = modal.getBoundingClientRect();
+    const touchY = e.touches[0].clientY;
+    // Detect touch in the top 60px of the modal (handle + title area)
+    if (touchY >= rect.top && touchY <= rect.top + 60) {
+      startY = touchY;
+      isDragging = true;
     }
   }, { passive: true });
+
   document.addEventListener('touchend', e => {
-    if (e.target === document.getElementById('scanner-handle')) {
-      const diff = e.changedTouches[0].clientY - startY;
-      if (diff > 60) stopScanner();
-    }
+    if (!isDragging) return;
+    isDragging = false;
+    const diff = e.changedTouches[0].clientY - startY;
+    if (diff > 50) stopScanner();
   }, { passive: true });
 })();
 
