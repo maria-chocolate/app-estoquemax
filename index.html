@@ -504,9 +504,9 @@
 </div>
 
 <!-- MODAL: SCANNER -->
-<div id="scanner-modal" class="modal-overlay">
-  <div class="modal">
-    <div class="modal-handle"></div>
+<div id="scanner-modal" class="modal-overlay" onclick="handleScannerOverlayClick(event)">
+  <div class="modal" id="scanner-modal-inner">
+    <div class="modal-handle" id="scanner-handle" style="cursor:grab"></div>
     <div class="modal-title" id="scanner-title">📷 Escanear Código de Barras</div>
     <div id="qr-reader"></div>
 
@@ -1171,6 +1171,33 @@ function countWithoutCatalog() {
 }
 
 function cancelCount() { resetCountUI(); }
+
+function handleScannerOverlayClick(e) {
+  if (e.target === document.getElementById('scanner-modal')) {
+    const isManual = document.getElementById('manual-entry-area').style.display !== 'none';
+    if (isManual) {
+      stopScanner();
+    } else {
+      stopScanner();
+    }
+  }
+}
+
+// Swipe down on scanner modal handle to close
+(function() {
+  let startY = 0;
+  document.addEventListener('touchstart', e => {
+    if (e.target === document.getElementById('scanner-handle')) {
+      startY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (e.target === document.getElementById('scanner-handle')) {
+      const diff = e.changedTouches[0].clientY - startY;
+      if (diff > 60) stopScanner();
+    }
+  }, { passive: true });
+})();
 
 function showManualEntry() {
   if (scanner) { scanner.pause(); }
