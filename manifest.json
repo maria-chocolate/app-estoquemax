@@ -2,7 +2,7 @@
   "name": "EstoqueMax",
   "short_name": "EstoqueMax",
   "description": "Controle de inventário com leitura de código de barras",
-  "start_url": "/app-estoquemax/"
+  "start_url": "/app-estoquemax/",
   "display": "standalone",
   "background_color": "#0a0f1e",
   "theme_color": "#0a0f1e",
