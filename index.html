@@ -290,12 +290,24 @@
 <div id="screen-contagem" class="screen active">
 
   <!-- Campo: nome da contagem -->
-  <div class="card" style="margin-bottom:12px">
+  <div class="card" style="margin-bottom:8px">
     <div class="section-title">📋 Nome da Contagem</div>
     <input type="text" id="contagem-nome" inputmode="text"
       style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:600;letter-spacing:1px"
       oninput="saveContagemNome()">
     <p style="font-size:11px;color:var(--muted);margin-top:7px">Este nome será usado como nome do arquivo ao exportar (.txt)</p>
+  </div>
+
+  <!-- Card de totais da contagem -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+    <div class="stat-chip">
+      <div class="stat-val" id="stat-count-products">0</div>
+      <div class="stat-lbl">Produtos</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-val" id="stat-count-qty" style="color:var(--accent2)">0</div>
+      <div class="stat-lbl">Quantidade Total</div>
+    </div>
   </div>
 
   <!-- Botão escanear (visível quando nenhum estado ativo) -->
@@ -983,6 +995,16 @@ function onSearchInput() {
 // ══════════════════════ STATS ══════════════════════
 function updateStats() {
   document.getElementById('stat-catalog').textContent = db.catalogCount || 0;
+  updateCountStats();
+}
+
+function updateCountStats() {
+  const products = new Set(db.entries.map(e => e._uncatalogued ? e.barcode : e.productId)).size;
+  const qty = db.entries.reduce((s, e) => s + e.qty, 0);
+  const pEl = document.getElementById('stat-count-products');
+  const qEl = document.getElementById('stat-count-qty');
+  if (pEl) pEl.textContent = products;
+  if (qEl) qEl.textContent = qty;
 }
 
 // ══════════════════════ CATALOG RENDER ══════════════════════
@@ -1722,7 +1744,11 @@ function deleteEntryFromEdit() {
 function clearAllData() {
   closeModal('clear-count-modal');
   db.entries = [];
-  saveEntries(); renderCountList(); updateStats(); showToast('Contagem limpa', 'error');
+  saveEntries(); renderCountList(); updateStats();
+  // Clear the report preview immediately so it doesn't accumulate with the next count
+  const preview = document.getElementById('report-preview');
+  if (preview) preview.textContent = 'Nenhum lançamento registrado.';
+  showToast('Contagem limpa', 'error');
 }
 
 // ══════════════════════ MODALS ══════════════════════
