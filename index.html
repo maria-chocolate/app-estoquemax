@@ -568,6 +568,10 @@
 
     <div id="scanner-buttons" style="margin-top:12px; display:flex; gap:8px">
       <button class="btn btn-secondary flex-1" onclick="stopScanner()">Fechar Câmera</button>
+      <button class="btn btn-secondary" id="torch-btn" onclick="toggleTorch()" style="width:48px;flex-shrink:0;padding:0;display:none" title="Lanterna">
+        <svg id="torch-icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M8 2l-2 6h10L14 2H8z"/><path d="M6 8l-2 10h16L18 8"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+        <svg id="torch-icon-on" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" width="20" height="20" style="display:none;color:var(--warn)"><path d="M8 2l-2 6h10L14 2H8z"/><path d="M6 8l-2 10h16L18 8"/><line x1="12" y1="18" x2="12" y2="22" stroke="var(--warn)" stroke-width="2"/></svg>
+      </button>
       <button class="btn btn-secondary flex-1" onclick="showManualEntry()">⌨️ Inserir Manualmente</button>
     </div>
   </div>
@@ -1127,14 +1131,14 @@ function addDirectEntry(productId) {
 // ══════════════════════ SCANNER ══════════════════════
 function openScanner(mode) {
   scannerMode = mode;
-  // Clear any leftover content in qr-reader before init
   const qrEl = document.getElementById('qr-reader');
   qrEl.innerHTML = '';
-  // Reset manual entry UI
   qrEl.style.display = 'block';
   document.getElementById('manual-entry-area').style.display = 'none';
   document.getElementById('scanner-buttons').style.display = 'flex';
   document.getElementById('scanner-title').textContent = '📷 Escanear Código de Barras';
+  document.getElementById('torch-btn').style.display = 'none';
+  torchOn = false; torchTrack = null;
   openModal('scanner-modal');
   setTimeout(() => {
     scanner = new Html5Qrcode('qr-reader');
@@ -1142,7 +1146,22 @@ function openScanner(mode) {
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 260, height: 110 } },
       onScan, () => {}
-    ).catch(() => { showToast('Não foi possível acessar a câmera', 'error'); closeModal('scanner-modal'); });
+    ).then(() => {
+      // After camera starts, check if torch is supported
+      const stream = scanner?.getRunningTrackCameraCapabilities?.();
+      // Try to get the video track directly from the video element
+      const video = document.querySelector('#qr-reader video');
+      if (video && video.srcObject) {
+        const tracks = video.srcObject.getVideoTracks();
+        if (tracks.length > 0) {
+          const caps = tracks[0].getCapabilities?.();
+          if (caps && caps.torch) {
+            torchTrack = tracks[0];
+            document.getElementById('torch-btn').style.display = 'flex';
+          }
+        }
+      }
+    }).catch(() => { showToast('Não foi possível acessar a câmera', 'error'); closeModal('scanner-modal'); });
   }, 320);
 }
 
@@ -1158,7 +1177,46 @@ async function onScan(code) {
   else { notFoundCode = code; countWithoutCatalog(); }
 }
 
+// ══════════════════════ LANTERNA ══════════════════════
+let torchOn = false;
+let torchTrack = null;
+
+async function toggleTorch() {
+  if (!torchTrack) return;
+  torchOn = !torchOn;
+  try {
+    await torchTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+    document.getElementById('torch-icon-off').style.display = torchOn ? 'none' : 'block';
+    document.getElementById('torch-icon-on').style.display  = torchOn ? 'block' : 'none';
+    const btn = document.getElementById('torch-btn');
+    btn.style.background = torchOn ? 'rgba(255,107,53,0.15)' : '';
+    btn.style.borderColor = torchOn ? 'var(--warn)' : '';
+  } catch(e) {
+    torchOn = !torchOn; // revert
+    showToast('Lanterna não disponível', 'error');
+  }
+}
+
+async function turnOffTorch() {
+  if (torchTrack && torchOn) {
+    try { await torchTrack.applyConstraints({ advanced: [{ torch: false }] }); } catch(e) {}
+  }
+  torchOn = false;
+  torchTrack = null;
+  const btn = document.getElementById('torch-btn');
+  if (btn) {
+    btn.style.display = 'none';
+    btn.style.background = '';
+    btn.style.borderColor = '';
+  }
+  const offIcon = document.getElementById('torch-icon-off');
+  const onIcon  = document.getElementById('torch-icon-on');
+  if (offIcon) offIcon.style.display = 'block';
+  if (onIcon)  onIcon.style.display  = 'none';
+}
+
 function stopScanner() {
+  turnOffTorch();
   if (scanner) {
     scanner.stop().then(() => { scanner.clear(); scanner = null; }).catch(() => { scanner = null; });
   }
