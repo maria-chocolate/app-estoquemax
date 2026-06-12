@@ -923,7 +923,7 @@ function findProduct(barcode) {
     // 13 digits, starts with '2', positions 8-12 are '00000'
     // e.g. 2059775000010 → extract '059775' (positions 2-7)
     const s = String(barcode).trim();
-    if (s.length === 13 && s[0] === '2' && s.slice(7, 12) === '00000') {
+    if (s.length === 13 && s[0] === '2' && s.slice(7, 11) === '0000') {
       const fragment = s.slice(1, 7); // positions 2-7 (0-indexed: 1-6)
       return findByBarcodeIDB(fragment);
     }
