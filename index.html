@@ -1183,7 +1183,15 @@ function openScanner(mode) {
 }
 
 async function onScan(code, skipStop = false) {
-  if (!skipStop) stopScanner();
+  if (!skipStop) {
+    // Stop scanner fully before proceeding
+    turnOffTorch();
+    if (scanner) {
+      try { await scanner.stop(); scanner.clear(); } catch(e) {}
+      scanner = null;
+    }
+    closeModal('scanner-modal');
+  }
   if (scannerMode === 'barcode-product') {
     document.getElementById('p-barcode').value = code;
     openModal('product-modal');
