@@ -1183,17 +1183,7 @@ function openScanner(mode) {
 }
 
 async function onScan(code, skipStop = false) {
-  if (!skipStop) {
-    turnOffTorch();
-    if (scanner) {
-      try { await scanner.stop(); scanner.clear(); } catch(e) {}
-      scanner = null;
-    }
-    // Force close the modal and wait for it to visually close
-    const overlay = document.getElementById('scanner-modal');
-    if (overlay) overlay.classList.remove('open');
-    await new Promise(r => setTimeout(r, 200));
-  }
+  if (!skipStop) stopScanner();
   if (scannerMode === 'barcode-product') {
     document.getElementById('p-barcode').value = code;
     openModal('product-modal');
@@ -1244,8 +1234,15 @@ async function turnOffTorch() {
 
 function stopScanner() {
   turnOffTorch();
+  // Hide the video element immediately so it doesn't cover the next modal
+  const qrEl = document.getElementById('qr-reader');
+  if (qrEl) qrEl.style.visibility = 'hidden';
   if (scanner) {
-    scanner.stop().then(() => { scanner.clear(); scanner = null; }).catch(() => { scanner = null; });
+    scanner.stop().then(() => {
+      scanner.clear();
+      scanner = null;
+      if (qrEl) qrEl.style.visibility = '';
+    }).catch(() => { scanner = null; if (qrEl) qrEl.style.visibility = ''; });
   }
   closeModal('scanner-modal');
 }
