@@ -1157,7 +1157,7 @@ function openScanner(mode) {
     scanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 260, height: 110 } },
-      onScan, () => {}
+      (decodedText) => onScan(decodedText), () => {}
     ).then(() => {
       scanning = true;
       const video = document.querySelector('#qr-reader video');
