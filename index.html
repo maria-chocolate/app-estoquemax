@@ -1234,17 +1234,14 @@ async function turnOffTorch() {
 
 function stopScanner() {
   turnOffTorch();
-  // Hide the video element immediately so it doesn't cover the next modal
-  const qrEl = document.getElementById('qr-reader');
-  if (qrEl) qrEl.style.visibility = 'hidden';
+  // Force scanner modal invisible immediately
+  const scannerModal = document.getElementById('scanner-modal');
+  if (scannerModal) { scannerModal.classList.remove('open'); scannerModal.style.display = 'none'; }
   if (scanner) {
-    scanner.stop().then(() => {
-      scanner.clear();
-      scanner = null;
-      if (qrEl) qrEl.style.visibility = '';
-    }).catch(() => { scanner = null; if (qrEl) qrEl.style.visibility = ''; });
+    scanner.stop().then(() => { scanner.clear(); scanner = null; }).catch(() => { scanner = null; });
   }
-  closeModal('scanner-modal');
+  // Restore display after stop
+  setTimeout(() => { if (scannerModal) scannerModal.style.display = ''; }, 500);
 }
 
 function openCountScanner()   { openScanner('count'); }
