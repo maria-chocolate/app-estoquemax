@@ -1150,6 +1150,7 @@ function openScanner(mode) {
   document.getElementById('scanner-title').textContent = '📷 Escanear Código de Barras';
   document.getElementById('torch-btn').style.display = 'none';
   torchOn = false; torchTrack = null;
+  scanning = false;
   openModal('scanner-modal');
   setTimeout(() => {
     scanner = new Html5Qrcode('qr-reader');
@@ -1164,6 +1165,7 @@ function openScanner(mode) {
       },
       onScan, () => {}
     ).then(() => {
+      scanning = true;
       // After camera starts, check if torch is supported
       const stream = scanner?.getRunningTrackCameraCapabilities?.();
       // Try to get the video track directly from the video element
@@ -1183,7 +1185,11 @@ function openScanner(mode) {
 }
 
 async function onScan(code, skipStop = false) {
-  if (!skipStop) stopScanner();
+  if (!skipStop) {
+    if (!scanning) return; // duplicate callback guard
+    scanning = false;
+    stopScanner();
+  }
   if (scannerMode === 'barcode-product') {
     document.getElementById('p-barcode').value = code;
     openModal('product-modal');
@@ -1232,16 +1238,17 @@ async function turnOffTorch() {
   if (onIcon)  onIcon.style.display  = 'none';
 }
 
+let scanning = false; // guard against duplicate onScan calls
+
 function stopScanner() {
+  scanning = false;
   turnOffTorch();
-  // Force scanner modal invisible immediately
   const scannerModal = document.getElementById('scanner-modal');
   if (scannerModal) { scannerModal.classList.remove('open'); scannerModal.style.display = 'none'; }
-  if (scanner) {
-    scanner.stop().then(() => { scanner.clear(); scanner = null; }).catch(() => { scanner = null; });
-  }
-  // Restore display after stop
-  setTimeout(() => { if (scannerModal) scannerModal.style.display = ''; }, 500);
+  const s = scanner;
+  scanner = null;
+  if (s) { s.stop().then(() => s.clear()).catch(() => {}); }
+  setTimeout(() => { if (scannerModal) scannerModal.style.display = ''; }, 600);
 }
 
 function openCountScanner()   { openScanner('count'); }
