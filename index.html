@@ -1155,7 +1155,13 @@ function openScanner(mode) {
     scanner = new Html5Qrcode('qr-reader');
     scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 260, height: 110 } },
+      {
+        fps: 15,
+        qrbox: { width: 300, height: 150 },
+        aspectRatio: 1.5,
+        disableFlip: false,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+      },
       onScan, () => {}
     ).then(() => {
       // After camera starts, check if torch is supported
@@ -1176,8 +1182,8 @@ function openScanner(mode) {
   }, 320);
 }
 
-async function onScan(code) {
-  stopScanner();
+async function onScan(code, skipStop = false) {
+  if (!skipStop) stopScanner();
   if (scannerMode === 'barcode-product') {
     document.getElementById('p-barcode').value = code;
     openModal('product-modal');
@@ -1333,22 +1339,20 @@ function hideManualEntry() {
 
 async function selectSkuResult(barcode, name, sku) {
   document.getElementById('sku-results').style.display = 'none';
-  // Stop scanner if running
   if (scanner) { scanner.stop().catch(()=>{}); scanner = null; }
   closeModal('scanner-modal');
-  // Set mode to count so onScan opens the count form
   scannerMode = 'count';
   const prod = await findProduct(barcode);
   if (prod) { showFoundProduct(prod); }
   else { notFoundCode = barcode; countWithoutCatalog(); }
 }
 
-function submitManualBarcode() {
+async function submitManualBarcode() {
   const code = document.getElementById('manual-barcode').value.trim();
   if (!code) { document.getElementById('manual-barcode').focus(); return; }
   document.getElementById('manual-barcode').value = '';
   stopScanner();
-  onScan(code);
+  await onScan(code, true);
 }
 
 function registerFromNotFound() {
