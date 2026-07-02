@@ -1156,19 +1156,10 @@ function openScanner(mode) {
     scanner = new Html5Qrcode('qr-reader');
     scanner.start(
       { facingMode: 'environment' },
-      {
-        fps: 15,
-        qrbox: { width: 300, height: 150 },
-        aspectRatio: 1.5,
-        disableFlip: false,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-      },
+      { fps: 10, qrbox: { width: 260, height: 110 } },
       onScan, () => {}
     ).then(() => {
       scanning = true;
-      // After camera starts, check if torch is supported
-      const stream = scanner?.getRunningTrackCameraCapabilities?.();
-      // Try to get the video track directly from the video element
       const video = document.querySelector('#qr-reader video');
       if (video && video.srcObject) {
         const tracks = video.srcObject.getVideoTracks();
@@ -1186,9 +1177,16 @@ function openScanner(mode) {
 
 async function onScan(code, skipStop = false) {
   if (!skipStop) {
-    if (!scanning) return; // duplicate callback guard
+    if (!scanning) return; // ignore duplicate callbacks fired during stop
     scanning = false;
-    stopScanner();
+    // Pause immediately (synchronous) so the camera freezes and stops calling onScan
+    try { scanner?.pause(true); } catch(e) {}
+    turnOffTorch();
+    closeModal('scanner-modal');
+    // Fully stop and release the camera in the background (no need to await)
+    const s = scanner;
+    scanner = null;
+    if (s) { s.stop().then(() => s.clear()).catch(() => {}); }
   }
   if (scannerMode === 'barcode-product') {
     document.getElementById('p-barcode').value = code;
@@ -1243,12 +1241,11 @@ let scanning = false; // guard against duplicate onScan calls
 function stopScanner() {
   scanning = false;
   turnOffTorch();
-  const scannerModal = document.getElementById('scanner-modal');
-  if (scannerModal) { scannerModal.classList.remove('open'); scannerModal.style.display = 'none'; }
+  try { scanner?.pause(true); } catch(e) {}
+  closeModal('scanner-modal');
   const s = scanner;
   scanner = null;
   if (s) { s.stop().then(() => s.clear()).catch(() => {}); }
-  setTimeout(() => { if (scannerModal) scannerModal.style.display = ''; }, 600);
 }
 
 function openCountScanner()   { openScanner('count'); }
